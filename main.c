@@ -1,35 +1,33 @@
 #include <stdint.h>
-#include <stm32f10x.h>
 
-void delay(volatile uint32_t ticks) {
-    for (volatile uint32_t i = 0; i < ticks; i++) {
-        __NOP();
-    }
+void delay(uint32_t ticks) {
+    for (volatile uint32_t i = 0; i < ticks; i++);
 }
 
-int __attribute__((noreturn)) main(void) {
+void SPI1_Init(void);
+void SPI1_Write(uint8_t data);
+uint8_t SPI1_Read(void);
+void SSD1306_Init(void);
+void SSD1306_DrawChessBoard(void);
+void SSD1306_Update(void);
 
-    RCC->APB2ENR |= RCC_APB2ENR_IOPCEN;
-    RCC->APB2ENR |= RCC_APB2ENR_IOPAEN; 
-
-
-    GPIOC->CRH &= ~GPIO_CRH_CNF13;      
-    GPIOC->CRH |= GPIO_CRH_MODE13_0;     
-
-
-    GPIOA->CRL &= ~(GPIO_CRL_CNF0 | GPIO_CRL_MODE0); 
-    GPIOA->CRL |= GPIO_CRL_CNF0_1;                   
-    GPIOA->ODR |= GPIO_ODR_ODR0;                   
-
-    while (1) {
-        uint32_t button_pressed = !(GPIOA->IDR & GPIO_IDR_IDR0);
-
-        uint32_t delay_val = button_pressed ? 200000 : 1000000;
-
-        GPIOC->ODR &= ~(1U << 13);  
-        delay(delay_val);
-
-        GPIOC->ODR |= (1U << 13);  
-        delay(delay_val);
+int main(void) {
+    *(volatile uint32_t*)(0x40021000 + 0x18) |= (1 << 4);
+    *(volatile uint32_t*)(0x40011000 + 0x04) |= (1 << 20);
+    for(int i = 0; i < 3; i++) {
+        *(volatile uint32_t*)(0x40011000 + 0x0C) |= (1 << 13);
+        delay(100000);
+        *(volatile uint32_t*)(0x40011000 + 0x0C) &= ~(1 << 13);
+        delay(100000);
+    }
+    
+    SPI1_Init();
+    SSD1306_Init();
+    SSD1306_DrawChessBoard();
+    SSD1306_Update();
+    
+    while(1) {
+        *(volatile uint32_t*)(0x40011000 + 0x0C) ^= (1 << 13);
+        delay(500000);
     }
 }
